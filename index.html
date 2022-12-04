@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universe</title>
+    <style>
+        body {
+            overflow: hidden;
+        }
+        * {
+            padding: 0px;
+            margin: 0px;
+        }
+    </style>
+    <script src="./assets/threejs/build/three.min.js" defer ></script>
+    <script>
+        let scene, camera, renderer, starts, velocity = 1, cameraRotation = 0.01, universe;
+    document.addEventListener("DOMContentLoaded",async function () {
+        
+        function randomInRange(min,max, distance) {
+            const range = max - min;
+            const randomNumber = Math.random() * range;
+            return (min + randomNumber) < distance ?  (min + randomNumber) - distance: (min + randomNumber);
+        }
+
+        function createUniverse() {
+            let starGeometry = new THREE.BufferGeometry();
+            let vertices = [];
+            let colors = [];
+            color = new THREE.Color();
+            let x,y,z;
+            let xyzHashMap = {};
+            for(i = 0; i < 1000000; i++ ) {
+                
+                x = randomInRange(-1500,1500,0);
+                y = randomInRange(-1500,1500,0);
+                z = randomInRange(-1500,1500,150);
+                if(xyzHashMap[x+y+z]) {
+                    continue;
+                }
+                xyzHashMap[x+y+z] = true;
+                vertices.push(x,y,z);
+                color.setRGB(Math.random(),Math.random(),Math.random());
+                colors.push( 255, 255, 255);
+            }
+            starGeometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+            starGeometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+            const material = new THREE.PointsMaterial( { size: 0.3,  vertexColors: true  });
+            starts = new THREE.Points(starGeometry,material);
+            scene.add(starts);
+
+            for(i = 0; i < 10; i ++) {         
+                const lightSourceGeometry = new THREE.SphereGeometry(1,30,30);
+                const color = new THREE.Color();
+                color.setRGB(Math.random(),Math.random(),Math.random());
+                const light = new THREE.PointLight( color.getHex(),1,1000 );
+                const randomZ = randomInRange(-1000,1000,0);
+                const randomX = randomInRange(-6,6,0)
+                const randomY = randomInRange(-6,6,0)
+                light.position.set( randomX < 0 ? -2 + randomX : 2 + randomX, randomY < 0 ? -2 + randomY : 2 + randomY,  randomZ);
+                scene.add( light );
+                lightSourceMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xffffff, 
+                    shininess: 10000, emissive: 0xffffff,
+                    emissiveIntensity: 0.5, })
+                lightSourceMesh = new THREE.Mesh(lightSourceGeometry,lightSourceMaterial);
+                lightSourceMesh.position.set( randomX , randomY, randomZ + 1 ); 
+                scene.add(lightSourceMesh);
+            }
+
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+
+            camera = new THREE.PerspectiveCamera(75,window.innerWidth / window.innerHeight, 1,1500);
+            camera.position.z = 50;
+            //camera.position.z = 500
+            camera.position.x = 0;
+            camera.position.y = 0;
+
+            createUniverse();
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth,window.innerHeight);
+
+            document.body.appendChild(renderer.domElement);
+            
+            return new Promise((resolve,reject) => {
+                const loader = new THREE.TextureLoader();
+                loader.load(
+                '/assets/images/universe.jpg',
+                function ( texture ) {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(20,20);
+                    const universeSphereGeometry = new THREE.SphereGeometry(2000,500,500);
+   
+                    const universeSphereMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+                    universe = new THREE.Mesh(universeSphereGeometry,universeSphereMaterial);
+                    universe.position.set(0,0,0);
+                    universe.rotation.y = 69999999999199;
+                    scene.add(universe);
+                    resolve(true);
+                },
+                undefined,
+                function ( err ) {
+                    console.error( 'An error happened.' );
+                    resolve(true);
+                }
+            );
+            });
+        }
+
+        function main() {
+
+            if(camera.position.z >= 50) {
+                velocity = -0.4;
+                cameraRotation = -0.01;
+            }
+
+            if(camera.position.z <= -600) {
+                velocity = 0.5;
+                cameraRotation = 0.03;
+            }
+
+            camera.position.z += velocity;
+            camera.rotation.z += cameraRotation;
+            renderer.render(scene,camera);
+            requestAnimationFrame(main);
+        }
+
+        await init();
+        main();
+    });
+    </script>
+</head>
+<body>
+    
+</body>
+</html>
